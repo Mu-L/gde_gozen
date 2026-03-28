@@ -120,15 +120,13 @@ func _ready() -> void:
 ## the video file can be found and it will load a Video object. After which
 ## [code]_update_video()[/code] get's run and set's the first frame image.
 func set_video_path(new_path: String) -> void:
-	if video != null:
-		close()
+	close()
 	if !is_node_ready():
 		await ready
 	if !get_tree().root.is_node_ready():
 		await get_tree().root.ready
 
 	audio_player.stream = null # Cleaning up the stream just in case.
-
 	if new_path == "" or new_path.ends_with(".tscn"):
 		return
 	elif new_path.split(":")[0] == "uid":
@@ -147,15 +145,24 @@ func set_video_path(new_path: String) -> void:
 
 
 ## Update the video manually by providing a GoZenVideo instance and an optional AudioStreamWAV.
-func update_video(video_instance: GoZenVideo, audio_stream: AudioStreamWAV = null) -> void:
-	if video != null:
-		close()
+func update_video(video_instance: GoZenVideo, audio_stream: AudioStream = null) -> void:
+	close()
+	if !is_node_ready():
+		await ready
+	if !get_tree().root.is_node_ready():
+		await get_tree().root.ready
+
+	audio_player.stream = null # Cleaning up the stream just in case.
 	path = video_instance.get_path()
+	if enable_audio:
+		if audio_stream != null:
+			audio_player.stream = audio_stream
+		else:
+			_open_audio()
+
 	_update_video(video_instance)
-	if audio_stream:
-		audio_player.stream = audio_stream
-	else:
-		_open_audio()
+	if is_open() and enable_auto_play:
+		play()
 
 
 ## Only run this function after manually having added a Video object to the `video` variable. A good reason for doing this is to load your video's at startup time to prevent your program for freezing for a second when loading in big video files. Some video formats load faster then others so if you are experiencing issues with long loading times, try to use this function and create the video object on startup, or try switching the video format which you are using.
@@ -163,6 +170,7 @@ func _update_video(new_video: GoZenVideo) -> void:
 	video = new_video
 	if !is_open():
 		printerr("Video isn't open!")
+		video = null
 		return
 
 	var image: Image
